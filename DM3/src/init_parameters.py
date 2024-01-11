@@ -1,16 +1,6 @@
 import numpy as np
 from numba import jit
 
-def sample_q(A,B):
-    return np.random.beta(A,B)[0]
-
-def sample_beta(beta):
-    """
-    Args:
-        beta (_type_): _description_
-    """
-    pass
-    
 
 def compute_vx(X):
     """Compute mean estimated variance of xt predictors
@@ -22,24 +12,6 @@ def compute_vx(X):
         float: mean estimated variance of xt predictors
     """
     return np.mean(np.var(X,axis=0))
-
-def sample_beta(k, s, seed=None):
-    """Sample of beta vector of dimensions 1*k
-
-    Args:
-        k (int): number of predictors
-        s (int): number of non-zero elements of beta
-        seed (int, optional): random seed
-
-    Returns:
-        np.array: dimensions 1*k
-    """
-    if seed is not None:
-        np.random.seed(seed=seed)
-    beta=np.zeros(k)
-    index_normal_distribution=np.random.choice(len(beta), size=s, replace=False)
-    beta[index_normal_distribution] = np.random.normal(loc=0, scale=1, size=s)
-    return beta
 
 def sample_phi(l):
     """Sample phi prior
@@ -54,77 +26,29 @@ def sample_phi(l):
         return 0
     else:
         return np.random.uniform(0,1, size=l)
-
-def compute_Z(beta):
-    """Compute z_1,...,z_k
+    
+def compute_U(T, l):
+    """Compute matrix of ut observations
 
     Args:
-        beta (np.array): random vector beta
+        T (int): number of observations
+        l (int): number of ut predictors
 
     Returns:
-        np.array: dimensions1*k
+        int: 0
     """
-    Z=beta
-    Z[Z!=0]=1
-    return Z
-
-def compute_sigma2(Ry, beta, X):
-    """ Compute sigma2
-    Args:
-        Ry (float): pourcentage of explained variance
-        beta (np.array): random vector beta
-        X (np.array): matrix of xt predictors
+    if l==0:
+        return 0
+    else:
+        pass
+    
+def sample_sigma2():
+    """ Sample sigma2 prior
 
     Returns:
         float: dimensions 1*1
     """
-    return (1/Ry-1)*np.mean(np.square(X @ beta))
-
-def sample_R2(A,B, seed=None):
-    """Sample R^2 according to a beta distribution
-
-    Args:
-        A (float): shape parameter
-        B (float): shape parameter
-        seed (int, optional): random seed
-
-    Returns:
-        float: R^2 random variable
-    """
-    if seed is not None:
-        np.random.seed(seed=seed)
-
-    return np.random.beta(A,B)
-
-def sample_q(a,b, seed=None):
-    """Sample q according to a beta distribution
-
-    Args:
-        a (float): shape parameter
-        b (float): shape parameter
-        seed (int, optional): random seed
-    Returns:
-        float: q random variable
-    """
-    if seed is not None:
-        np.random.seed(seed=seed)
-
-    return np.random.beta(a,b)
-
-@jit(nopython=True)
-def compute_gamma2(R2, q, k, vx):
-    """Compute gamma^2 by inverting the R^2 function
-
-    Args:
-        R2 (float): R^2 random variable
-        q (float): q random variable
-        k (int): number of xt predictors
-        vx (float): mean estimated variance of xt predictors
-
-    Returns:
-        float: gamma^2 random variable
-    """
-    return R2/((1-R2)*q*k*vx)
+    return np.random.beta(a=1e-6, b=1)
 
 def sample_epsilon(T, sigma2, seed=None):
     """Sample epsilon_1,...,epsilon_T
@@ -142,6 +66,77 @@ def sample_epsilon(T, sigma2, seed=None):
         
     return np.random.normal(loc=0, scale=sigma2, size=T)
 
+
+def sample_R2(A,B, seed=None):
+    """Sample R^2 according to a beta distribution
+
+    Args:
+        A (float): shape parameter
+        B (float): shape parameter
+        seed (int, optional): random seed
+
+    Returns:
+        float: R^2 random variable
+    """
+    if seed is not None:
+        np.random.seed(seed=seed)
+
+    return np.random.beta(A,B)
+
+@jit(nopython=True)
+def compute_gamma2(R2, q, k, vx):
+    """Compute gamma^2 by inverting the R^2 function
+
+    Args:
+        R2 (float): R^2 random variable
+        q (float): q random variable
+        k (int): number of xt predictors
+        vx (float): mean estimated variance of xt predictors
+
+    Returns:
+        float: gamma^2 random variable
+    """
+    return R2/((1-R2)*q*k*vx)
+
+def sample_q(a,b, seed=None):
+    """Sample q according to a beta distribution
+
+    Args:
+        a (float): shape parameter
+        b (float): shape parameter
+        seed (int, optional): random seed
+    Returns:
+        float: q random variable
+    """
+    if seed is not None:
+        np.random.seed(seed=seed)
+
+    return np.random.beta(a,b)
+
+def sample_s(k, q):
+    return np.random.binomial(k, 1-q)
+
+def sample_beta(q, k, sigma2, gamma2):
+    beta=np.zeros(k)
+    for i in range(len(beta)):
+        bernoulli = np.random.binomial(1, q)
+        if bernoulli == 1:
+            beta[i] = np.random.normal(0, np.sqrt(sigma2*gamma2))
+    return beta
+
+def compute_Z(beta):
+    """Compute z_1,...,z_k
+
+    Args:
+        beta (np.array): random vector beta
+
+    Returns:
+        np.array: dimensions1*k
+    """
+    Z=beta
+    Z[Z!=0]=1
+    return Z
+
 def compute_Y(X, beta, epsilon):
     """Compute y_1,...,y_T
 
@@ -157,7 +152,7 @@ def compute_Y(X, beta, epsilon):
 
 
 ### Final function
-def init_parameters(T, k, l, rho, s, Ry, a, b, A, B, standardized_X, seed=None):
+def init_parameters(T, k, l, a, b, A, B, X, seed=None):
     """
     Initialize parameters for a given simulation.
 
@@ -166,9 +161,6 @@ def init_parameters(T, k, l, rho, s, Ry, a, b, A, B, standardized_X, seed=None):
         T (int): Number of observations.
         k (int): Number of covariates.
         l (int): Number of latent variables.
-        rho (float): Correlation parameter.
-        s (float): Scaling parameter.
-        Ry (float): Response variance.
         a (float): Shape parameter for gamma2.
         b (float): Shape parameter for gamma2.
         A (float): Shape parameter for q.
@@ -178,21 +170,23 @@ def init_parameters(T, k, l, rho, s, Ry, a, b, A, B, standardized_X, seed=None):
     Returns:
         dict: Dictionary containing initialized parameters.
     """
-    X=compute_X(T=T, k=k, rho=rho)
-    if standardized_X:
-        X = (X-np.mean(X, axis=0))/np.std(X, axis=0)
+    q = sample_q(a,b)
+    sigma2 = sample_sigma2()
+    R2 = sample_R2(A,B, seed=seed)
+    vx=compute_vx(X)
+    gamma2 = compute_gamma2(R2=R2, q=q, k=k, vx=vx)
 
     dct = {
         "X" : X,
         "U": compute_U(T=T, l=l),
-        "beta": sample_beta(k=k, s=s, seed=seed),
+        "beta": sample_beta(q=q, k=k, sigma2=sigma2, gamma2=gamma2),
         "phi": sample_phi(l=l),
-        "q": sample_q(a,b, seed=seed)
+        "q": q
     }
-    dct["R2"] = sample_R2(A,B, seed=seed)
-    dct["gamma2"]=compute_gamma2(R2=dct["R2"], q=dct["q"], k=k, vx=compute_vx(dct["X"]))
+    dct["R2"] = R2
+    dct["gamma2"] = gamma2
     dct["Z"]=compute_Z(beta=dct["beta"])
-    dct["sigma2"] = compute_sigma2(Ry=Ry, beta=dct["beta"], X=dct["X"])
+    dct["sigma2"] = sigma2
     dct["epsilon"] = sample_epsilon(T=T, sigma2=dct["sigma2"], seed=seed)
     dct["Y"]=compute_Y(X=dct["X"], beta=dct["beta"], epsilon=dct["epsilon"])
     return dct
