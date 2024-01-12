@@ -54,11 +54,11 @@ def get_R2_q_densities(data: np.ndarray, grid: np.ndarray) -> np.ndarray:
     q = grid[:,1]
     s_z = np.sum(data[2,:k]) #z
     
-    log_weights = - np.prod([
-        1/(1e-6 + 2*data[0,11]),#sigma2
-        (k*data[0,7]*q*(1-R2))/(1e-8 + R2), #vx
-         np.dot(data[2,k:], np.dot(np.diag(data[2,:k]), data[2,k:])) #beta z beta
-        ])
+    sigma2_term = 1/(1e-6 + 2*data[0,11]) #sigma2
+    vx_term_array = (k*data[0,7]*q*(1-R2))/(1e-8 + R2) #vx
+    betat_z_beta = np.dot(data[2,k:2*k].T, np.dot(np.diag(data[2,:k]), data[2,k:2*k]))
+
+    log_weights = - sigma2_term*betat_z_beta*vx_term_array
     log_weights += (s_z+s_z/2+data[0,2]-1)*np.log(q) #a
     log_weights += (k-s_z+data[0,3]-1)*np.log(1-q) #b
     log_weights += (data[0,4]-1-s_z/2)*np.log(R2) #A

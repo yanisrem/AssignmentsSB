@@ -47,7 +47,7 @@ def vectorize_data(dct: Dict[str, np.ndarray],
     
     data[1,:]=dct["Y"]
     data[2,:k] = dct["Z"]
-    data[2,k:] = dct["beta"]
+    data[2,k:2*k] = dct["beta"]
     data[3:,:] = dct["X"].T
     
     return data
