@@ -5,7 +5,7 @@ from sklearn.pipeline import Pipeline
 from sklearn.impute import SimpleImputer
 from sklearn.preprocessing import FunctionTransformer, StandardScaler
 
-class PreprocessData:
+class PreprocessDataTrainTestSplit:
     def __init__(self, data_path, test_size):
         self.data_path = data_path
         self.test_size = test_size
@@ -73,3 +73,43 @@ class PreprocessData:
         df_test_clean_diff_stand["INDPRO"] = df_y_test_transform_diff.values
 
         return df_train_clean_diff_stand, df_test_clean_diff_stand
+    
+class PreprocessDataTSCV:
+    def __init__(self, data_path):
+        self.data_path = data_path
+    
+    def process(self):
+        df = pd.read_csv(self.data_path)
+        df.drop('sasdate', axis=1, inplace=True)
+        df = df.iloc[1:,:]
+        df_y = df["INDPRO"]
+        df_x = df.drop('INDPRO', axis=1).copy()
+
+        ##Step1 : Process nan values
+        #Drop columns with too many nan
+        col_to_drop = ['ACOGNO', 'TWEXMMTH', 'UMCSENTx', 'ANDENOx']
+        column_transformer = ColumnTransformer(
+            transformers=[('drop_columns', 'drop', col_to_drop)],
+            remainder='passthrough'
+        )
+        #Replace nan values by median for others
+        imputer = SimpleImputer(strategy='median')
+
+        #Convert numpy arrays to Pandas DataFrame
+        to_df = FunctionTransformer(lambda x: pd.DataFrame(x, columns=df_x.columns.drop(col_to_drop)), validate=False)
+
+        pipeline_drop_imputer = Pipeline([
+            ('preprocessor', column_transformer),
+            ('imputer', imputer),
+            ('to_dataframe', to_df)
+        ])
+
+        df_x_transform = pipeline_drop_imputer.fit_transform(df_x)
+        df_transform = df_x_transform.copy()
+        df_transform["INDPRO"] = df_y.values
+
+        ##Step 2 : first-order differenciation
+
+        df_transform_diff = df_transform.diff().drop(index=df_transform.index[0], axis=0, inplace=False)
+
+        return df_transform_diff
