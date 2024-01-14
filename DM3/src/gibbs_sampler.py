@@ -110,22 +110,28 @@ def sample_R2_q_post(grid: np.ndarray, data: np.ndarray, npoints: int, seed: int
     return grid[index,:]
 
 @jit(nopython=True)
-def compute_X_and_W_tilde(z: np.ndarray, data: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+def compute_X_and_W_tilde(z: np.ndarray, data: np.ndarray, return_null_indexes: bool = False) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
     """
     Compute X_tilde_t and W_tilde based on binary variable z and observed data.
 
     Args:
         z (np.ndarray): Binary variable z.
         data (np.ndarray): Observed data.
+        return_null_indexes (bool, optional): Whether to return the indices where z is zero. Default is False.
 
     Returns:
-        Tuple[np.ndarray, np.ndarray]: Tuple containing X_tilde_t and W_tilde.
+        Tuple[np.ndarray, np.ndarray, np.darray]: Tuple containing X_tilde_t and W_tilde.
     """
     non_zero_z=np.nonzero(z)[0]
+    if return_null_indexes:
+        zero_z_indexes = np.where(z==0)[0]
+    else:
+        zero_z_indexes = None
     I_s_z=np.identity(non_zero_z.shape[0])
     X_tilde_t = data[3+non_zero_z,:] 
     W_tilde = X_tilde_t@X_tilde_t.T+(1/data[0,10])*I_s_z #gamma2
-    return X_tilde_t, W_tilde
+    return X_tilde_t, W_tilde, zero_z_indexes
+  
 
 @jit(nopython=True)
 def yy_minus_betah_w_betah(X_tilde_t: np.ndarray, W_tilde: np.ndarray, data: np.ndarray) -> float:
@@ -162,7 +168,7 @@ def zi_densities(i: int, data: np.ndarray) -> np.ndarray:
     z = data[2,:k].copy()
     for zi in range(2):
         z[i] = zi
-        X_tilde_t, W_tilde = compute_X_and_W_tilde(z, data)
+        X_tilde_t, W_tilde, _ = compute_X_and_W_tilde(z, data, False)
         sign, logabsdet = np.linalg.slogdet(W_tilde)
         log_weights[zi] -= (1/2)*sign*logabsdet
         log_weights[zi] -= (data.shape[1]/2)* np.log( yy_minus_betah_w_betah(X_tilde_t, W_tilde, data) )
@@ -235,7 +241,7 @@ def sample_sigma2_post(data: np.ndarray, n_variables: int, seed=None) -> np.ndar
         
     k=int(data[0,0])
     T=len(data[1,:])
-    X_tilde_t, W_tilde = compute_X_and_W_tilde(data[2,:k], data)
+    X_tilde_t, W_tilde, _ = compute_X_and_W_tilde(data[2,:k], data, False)
     
     inverse_gamma_dist = sp.stats.invgamma(T/2, scale=(1/2)*yy_minus_betah_w_betah(X_tilde_t, W_tilde, data))
     
@@ -257,13 +263,9 @@ def sample_beta_tilde_post(data: np.ndarray, n_variables: int, seed=None) -> np.
         np.random.seed(seed)
         
     k=int(data[0,0])
-    X_tilde_t, W_tilde = compute_X_and_W_tilde(data[2,:k], data)
+    X_tilde_t, W_tilde, null_indexes_beta = compute_X_and_W_tilde(data[2,:k], data, True)
     
-    return np.random.multivariate_normal(
-        np.linalg.inv(W_tilde)@X_tilde_t@data[1,:], #y
-        data[0,11]*np.linalg.inv(W_tilde),  #sigma2
-        n_variables
-    )
+    return np.random.multivariate_normal(np.linalg.inv(W_tilde)@X_tilde_t@data[1,:], data[0,11]*np.linalg.inv(W_tilde), n_variables), null_indexes_beta
 
 def gibbs_sampler_joint_post(data: np.ndarray, n_iter: int, burn_in_period: int, n_iter_zi: int, debug: bool = False, seed: int = None) -> Tuple[np.ndarray, Optional[np.ndarray]]:
     """
@@ -287,7 +289,7 @@ def gibbs_sampler_joint_post(data: np.ndarray, n_iter: int, burn_in_period: int,
     k = int(data1[0,0])
     vx = data1[0,7]
     if debug:
-        accu = {"R2 post": [], "q post": [], "sigma2 post": [], "beta post": []}
+        accu = {"R2 post": [], "q post": [], "sigma2 post": [], "beta post": [], "null_indexes_beta": []}
     
     for step in range(n_iter):
         if debug:
@@ -302,11 +304,12 @@ def gibbs_sampler_joint_post(data: np.ndarray, n_iter: int, burn_in_period: int,
         data1[0,11] = sample_sigma2_post(data1, 1) #update sigma2
         non_zero_z=np.nonzero(data1[2,:k])[0]
         if non_zero_z.shape[0]>0:
-            beta_tilde = sample_beta_tilde_post(data1, 1)
+            beta_tilde, null_indexes_beta = sample_beta_tilde_post(data1, 1)
             data1[2,non_zero_z] = beta_tilde  #update beta tilde
             if debug:
                 if step>=burn_in_period:
                     accu["beta post"].append(beta_tilde.copy())
+                    accu["null_indexes_beta"].append(null_indexes_beta)
     if debug:
         return data1, accu
     return data1, None
