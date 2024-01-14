@@ -6,9 +6,9 @@ from sklearn.impute import SimpleImputer
 from sklearn.preprocessing import FunctionTransformer, StandardScaler
 
 class PreprocessDataTrainTestSplit:
-    def __init__(self, data_path, test_size, normalize=False, max_date=None):
+    def __init__(self, data_path, split_date, normalize=False, max_date=None):
         self.data_path = data_path
-        self.test_size = test_size
+        self.split_date = split_date
         self.normalize = normalize
         self.max_date = max_date
     
@@ -22,9 +22,14 @@ class PreprocessDataTrainTestSplit:
         else:
             df_filtered = df.copy()
 
-        df_y = df_filtered["INDPRO"]
-        df_x = df_filtered.drop('INDPRO', axis=1).copy()
-        df_x_train, df_x_test, df_y_train, df_y_test = train_test_split(df_x, df_y, test_size=self.test_size, shuffle=False)
+        train_df = df_filtered[df_filtered.index <= self.split_date]
+        test_df = df_filtered[df_filtered.index > self.split_date]
+
+        df_y_train = train_df["INDPRO"]
+        df_x_train = train_df.drop('INDPRO', axis=1).copy()
+
+        df_y_test = test_df["INDPRO"]
+        df_x_test = test_df.drop('INDPRO', axis=1).copy()
 
         ##Step1 : Process nan values
         #Drop columns with too many nan
@@ -37,7 +42,7 @@ class PreprocessDataTrainTestSplit:
         imputer = SimpleImputer(strategy='median')
 
         #Convert numpy arrays to Pandas DataFrame
-        to_df = FunctionTransformer(lambda x: pd.DataFrame(x, columns=df_x.columns.drop(col_to_drop)), validate=False)
+        to_df = FunctionTransformer(lambda x: pd.DataFrame(x, columns=df_x_train.columns.drop(col_to_drop)), validate=False)
 
         pipeline_drop_imputer = Pipeline([
             ('preprocessor', column_transformer),
@@ -71,7 +76,7 @@ class PreprocessDataTrainTestSplit:
             df_x_test_transform_diff = df_test_transform_diff.drop('INDPRO', axis=1).copy()
 
             scaler = StandardScaler()
-            to_df = FunctionTransformer(lambda x: pd.DataFrame(x, columns=df_x.columns.drop(col_to_drop)), validate=False)
+            to_df = FunctionTransformer(lambda x: pd.DataFrame(x, columns=df_x_train.columns.drop(col_to_drop)), validate=False)
 
             pipeline_scaler = Pipeline([
                 ('scaler', scaler),
@@ -80,6 +85,11 @@ class PreprocessDataTrainTestSplit:
 
             df_x_train_clean_diff_stand = pipeline_scaler.fit_transform(df_x_train_transform_diff)
             df_x_test_clean_diff_stand = pipeline_scaler.transform(df_x_test_transform_diff)
+
+            df_x_train_clean_diff_stand["sasdate"] = df_x_train_transform_diff.index
+            df_x_train_clean_diff_stand.set_index("sasdate", inplace=True)
+            df_x_test_clean_diff_stand["sasdate"] = df_x_test_transform_diff.index
+            df_x_test_clean_diff_stand.set_index("sasdate", inplace=True)
 
             df_train_clean_diff_stand = df_x_train_clean_diff_stand.copy()
             df_train_clean_diff_stand["INDPRO"] = df_y_train_transform_diff.values
