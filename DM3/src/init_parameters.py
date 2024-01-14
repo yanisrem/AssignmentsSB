@@ -1,6 +1,6 @@
 import numpy as np
 from numba import jit
-
+from src.mh_rw import *
 
 def compute_vx(X):
     """Compute mean estimated variance of xt predictors
@@ -144,7 +144,7 @@ def compute_Y(X, beta, epsilon):
 
 
 ### Final function
-def init_parameters(T, k, l, a, b, A, B, X, sigma2, seed=None):
+def init_parameters(T, k, l, a, b, A, B, X, n_iter_mh_sigma2, burn_in_period_mh_sigma2, jump_size_mh_sigma2, seed=None):
     """
     Initialize parameters for a given simulation.
 
@@ -166,7 +166,8 @@ def init_parameters(T, k, l, a, b, A, B, X, sigma2, seed=None):
     R2 = sample_R2(A,B, seed=seed)
     vx=compute_vx(X)
     gamma2 = compute_gamma2(R2=R2, q=q, k=k, vx=vx)
-
+    sigma2_samples = metropolis_hastings_rw(n_iter=n_iter_mh_sigma2, burn_in_period=burn_in_period_mh_sigma2, initial_value=np.random.uniform(0, 10), scale=jump_size_mh_sigma2)
+    sigma2 = np.median(sigma2_samples)
     dct = {
         "X" : X,
         "U": compute_U(T=T, l=l),
