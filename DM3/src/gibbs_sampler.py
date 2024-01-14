@@ -289,7 +289,7 @@ def gibbs_sampler_joint_post(data: np.ndarray, n_iter: int, burn_in_period: int,
     k = int(data1[0,0])
     vx = data1[0,7]
     if debug:
-        accu = {"R2 post": [], "q post": [], "sigma2 post": [], "beta post": [], "null_indexes_beta": []}
+        accu = {"R2 post": [], "q post": [], "sigma2 post": [], "beta post": []}
     
     for step in range(n_iter):
         if debug:
@@ -308,8 +308,10 @@ def gibbs_sampler_joint_post(data: np.ndarray, n_iter: int, burn_in_period: int,
             data1[2,non_zero_z] = beta_tilde  #update beta tilde
             if debug:
                 if step>=burn_in_period:
-                    accu["beta post"].append(beta_tilde.copy())
-                    accu["null_indexes_beta"].append(null_indexes_beta)
+                    beta = np.zeros(beta_tilde.shape[1] + null_indexes_beta.shape[0])
+                    beta[np.setdiff1d(np.arange(len(beta)), null_indexes_beta)] = beta_tilde
+                    beta = beta[np.newaxis, :]
+                    accu["beta post"].append(beta.copy())
     if debug:
         return data1, accu
     return data1, None
