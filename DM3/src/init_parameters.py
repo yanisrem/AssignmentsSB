@@ -41,14 +41,6 @@ def compute_U(T, l):
         return 0
     else:
         pass
-    
-def sample_sigma2():
-    """ Sample sigma2 prior
-
-    Returns:
-        float: dimensions 1*1
-    """
-    return np.random.beta(a=1e-6, b=1)
 
 def sample_epsilon(T, sigma2, seed=None):
     """Sample epsilon_1,...,epsilon_T
@@ -152,7 +144,7 @@ def compute_Y(X, beta, epsilon):
 
 
 ### Final function
-def init_parameters(T, k, l, a, b, A, B, X, seed=None):
+def init_parameters(T, k, l, a, b, A, B, X, sigma2, seed=None):
     """
     Initialize parameters for a given simulation.
 
@@ -171,7 +163,6 @@ def init_parameters(T, k, l, a, b, A, B, X, seed=None):
         dict: Dictionary containing initialized parameters.
     """
     q = sample_q(a,b)
-    sigma2 = sample_sigma2()
     R2 = sample_R2(A,B, seed=seed)
     vx=compute_vx(X)
     gamma2 = compute_gamma2(R2=R2, q=q, k=k, vx=vx)
