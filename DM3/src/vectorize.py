@@ -28,8 +28,7 @@ def vectorize_data(dct: Dict[str, np.ndarray],
     Returns:
         np.ndarray: Vectorized data array.
     """
-    
-    data = np.zeros((k+3, T))
+    data = np.zeros((k+3, np.max((T,3*k))))
     
     data[0,0]=k
     data[0,1]=l
@@ -37,7 +36,7 @@ def vectorize_data(dct: Dict[str, np.ndarray],
     data[0,3]=b
     data[0,4]=A
     data[0,5]=B
-    data[0,6]=seed
+    data[0,6]=T
     
     data[0,7]=compute_vx(dct["X"])
     data[0,8]=dct["R2"]
@@ -45,9 +44,9 @@ def vectorize_data(dct: Dict[str, np.ndarray],
     data[0,10]=dct["gamma2"]
     data[0,11]=dct["sigma2"]
     
-    data[1,:]=dct["Y"]
+    data[1,:T]=dct["Y"]
     data[2,:k] = dct["Z"]
     data[2,k:2*k] = dct["beta"]
-    data[3:,:] = dct["X"].T
+    data[3:,:T] = dct["X"].T
     
     return data

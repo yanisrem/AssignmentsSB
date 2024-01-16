@@ -144,7 +144,7 @@ def compute_Y(X, beta, epsilon):
 
 
 ### Final function
-def init_parameters(T, k, l, a, b, A, B, X, n_iter_mh_sigma2, burn_in_period_mh_sigma2, jump_size_mh_sigma2, seed=None):
+def init_parameters(T, k, l, a, b, A, B, X, Y, n_iter_mh_sigma2, burn_in_period_mh_sigma2, jump_size_mh_sigma2, seed=None):
     """
     Initialize parameters for a given simulation.
 
@@ -180,5 +180,5 @@ def init_parameters(T, k, l, a, b, A, B, X, n_iter_mh_sigma2, burn_in_period_mh_
     dct["Z"]=compute_Z(beta=dct["beta"])
     dct["sigma2"] = sigma2
     dct["epsilon"] = sample_epsilon(T=T, sigma2=dct["sigma2"], seed=seed)
-    dct["Y"]=compute_Y(X=dct["X"], beta=dct["beta"], epsilon=dct["epsilon"])
+    dct["Y"]= Y
     return dct
