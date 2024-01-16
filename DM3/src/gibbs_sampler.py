@@ -122,13 +122,14 @@ def compute_X_and_W_tilde(z: np.ndarray, data: np.ndarray, return_null_indexes: 
     Returns:
         Tuple[np.ndarray, np.ndarray, np.darray]: Tuple containing X_tilde_t and W_tilde.
     """
+    T = int(data[0,6])
     non_zero_z=np.nonzero(z)[0]
     if return_null_indexes:
         zero_z_indexes = np.where(z==0)[0]
     else:
         zero_z_indexes = None
     I_s_z=np.identity(non_zero_z.shape[0])
-    X_tilde_t = data[3+non_zero_z,:] 
+    X_tilde_t = data[3+non_zero_z,:T] 
     W_tilde = X_tilde_t@X_tilde_t.T+(1/data[0,10])*I_s_z #gamma2
     return X_tilde_t, W_tilde, zero_z_indexes
   
@@ -146,8 +147,9 @@ def yy_minus_betah_w_betah(X_tilde_t: np.ndarray, W_tilde: np.ndarray, data: np.
     Returns:
         float: The calculated quantity yy - beta^T * W_tilde * beta.
     """
-    xy = X_tilde_t @ data[1,:]
-    return data[1,:].T @ data[1,:] -(xy.T @ np.linalg.inv(W_tilde) @ xy)
+    T = int(data[0,6])
+    xy = X_tilde_t @ data[1,:T]
+    return data[1,:T].T @ data[1,:T] -(xy.T @ np.linalg.inv(W_tilde) @ xy)
 
 
 @jit(nopython=True)
@@ -239,8 +241,8 @@ def sample_sigma2_post(data: np.ndarray, n_variables: int, seed=None) -> np.ndar
     if seed is not None:
         np.random.seed(seed)
         
-    k=int(data[0,0])
-    T=len(data[1,:])
+    k = int(data[0,0])
+    T = int(data[0,6])
     X_tilde_t, W_tilde, _ = compute_X_and_W_tilde(data[2,:k], data, False)
     
     inverse_gamma_dist = sp.stats.invgamma(T/2, scale=(1/2)*yy_minus_betah_w_betah(X_tilde_t, W_tilde, data))
@@ -262,10 +264,11 @@ def sample_beta_tilde_post(data: np.ndarray, n_variables: int, seed=None) -> np.
     if seed is not None:
         np.random.seed(seed)
         
-    k=int(data[0,0])
+    k = int(data[0,0])
+    T = int(data[0,6])
     X_tilde_t, W_tilde, null_indexes_beta = compute_X_and_W_tilde(data[2,:k], data, True)
     
-    return np.random.multivariate_normal(np.linalg.inv(W_tilde)@X_tilde_t@data[1,:], data[0,11]*np.linalg.inv(W_tilde), n_variables), null_indexes_beta
+    return np.random.multivariate_normal(np.linalg.inv(W_tilde)@X_tilde_t@data[1,:T], data[0,11]*np.linalg.inv(W_tilde), n_variables), null_indexes_beta
 
 def gibbs_sampler_joint_post(data: np.ndarray, n_iter: int, burn_in_period: int, n_iter_zi: int, debug: bool = False, seed: int = None) -> Tuple[np.ndarray, Optional[np.ndarray]]:
     """

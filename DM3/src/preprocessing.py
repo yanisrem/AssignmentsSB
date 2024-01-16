@@ -6,9 +6,16 @@ from sklearn.impute import SimpleImputer
 from sklearn.preprocessing import FunctionTransformer, StandardScaler
 
 class PreprocessDataTrainTestSplit:
-    def __init__(self, data_path, split_date, normalize=False, max_date=None):
+    def __init__(self,
+                 data_path,
+                 split_date,
+                 columns_to_del=['IPFPNSS', 'IPFINAL', 'IPCONGD', 'IPDCONGD', 'IPNCONGD', 'IPBUSEQ', 'IPMAT', 'IPDMAT', 'IPNMAT', 'IPMANSICS', 'IPB51222S', 'IPFUELS'],
+                 normalize=False, 
+                 max_date=None):
+        
         self.data_path = data_path
         self.split_date = split_date
+        self.columns_to_del = columns_to_del
         self.normalize = normalize
         self.max_date = max_date
     
@@ -17,8 +24,13 @@ class PreprocessDataTrainTestSplit:
         df = df.iloc[1:,:]
         df["sasdate"] = pd.to_datetime(df["sasdate"], format='%m/%d/%Y')
         df.set_index("sasdate", inplace=True)
-        if self.max_date is not None:
-            df_filtered = df.loc[df.index <= self.max_date]
+        if (self.columns_to_del is not None)&(self.max_date is not None):
+            df_filtered = df.drop(columns=self.columns_to_del)
+            df_filtered = df_filtered.loc[df.index <= self.max_date]
+        elif (self.columns_to_del is not None)&(self.max_date is None):
+            df_filtered = df.drop(columns=self.columns_to_del)
+        elif (self.columns_to_del is None)&(self.max_date is not None):
+            df_filtered = df_filtered.loc[df.index <= self.max_date]
         else:
             df_filtered = df.copy()
 
