@@ -1,12 +1,31 @@
 import numpy as np
 
 def target_distribution(x):
+    """Prior distribution of sigma^2
+
+    Args:
+        x (float): input value
+
+    Returns:
+        float: pdf function pi(sigma^2) in x
+    """
     if x>0:
         return 1 / (x + 1e-6)
     else:
         return 0
 
 def metropolis_hastings_rw(n_iter, burn_in_period, initial_value, scale):
+    """Metropolis-Hastings Random Walk algorithm to sample according to prior distribution of sigma^2
+
+    Args:
+        n_iter (int): number of iterations
+        burn_in_period (int): burn-in-period
+        initial_value (float): initial value
+        scale (float): jump size parameter
+
+    Returns:
+        np.array: samples sigma^2 generated
+    """
     samples = [initial_value]
 
     for t in range(n_iter):

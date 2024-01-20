@@ -1,17 +1,27 @@
 import pandas as pd
-from sklearn.model_selection import train_test_split
 from sklearn.compose import ColumnTransformer
 from sklearn.pipeline import Pipeline
 from sklearn.impute import SimpleImputer
 from sklearn.preprocessing import FunctionTransformer, StandardScaler
 
 class PreprocessDataTrainTestSplit:
+    """Class to process samples and split them in train-test
+    """
     def __init__(self,
                  data_path,
                  split_date,
                  columns_to_del=['IPFPNSS', 'IPFINAL', 'IPCONGD', 'IPDCONGD', 'IPNCONGD', 'IPBUSEQ', 'IPMAT', 'IPDMAT', 'IPNMAT', 'IPMANSICS', 'IPB51222S', 'IPFUELS'],
                  normalize=False, 
                  max_date=None):
+        """Class constructor
+
+        Args:
+            data_path (str): data path
+            split_date (str): last date of training sample
+            columns_to_del (list, optional): columns to delete. Defaults to ['IPFPNSS', 'IPFINAL', 'IPCONGD', 'IPDCONGD', 'IPNCONGD', 'IPBUSEQ', 'IPMAT', 'IPDMAT', 'IPNMAT', 'IPMANSICS', 'IPB51222S', 'IPFUELS'].
+            normalize (bool, optional): if True, samples are normalized. Defaults to False.
+            max_date (_type_, optional): last date of dataset. Defaults to None.
+        """
         
         self.data_path = data_path
         self.split_date = split_date
@@ -20,6 +30,11 @@ class PreprocessDataTrainTestSplit:
         self.max_date = max_date
     
     def process(self):
+        """Apply preprocessing and train-test division
+
+        Returns:
+            Tuple[pd.DataFrame, pd.Dataframe]: preprocessed train and test datasets
+        """
         df = pd.read_csv(self.data_path)
         df = df.iloc[1:,:]
         df["sasdate"] = pd.to_datetime(df["sasdate"], format='%m/%d/%Y')
@@ -112,43 +127,3 @@ class PreprocessDataTrainTestSplit:
         
         else:
             return df_train_transform_diff, df_test_transform_diff
-
-class PreprocessDataTSCV:
-    def __init__(self, data_path):
-        self.data_path = data_path
-    
-    def process(self):
-        df = pd.read_csv(self.data_path)
-        df.drop('sasdate', axis=1, inplace=True)
-        df = df.iloc[1:,:]
-        df_y = df["INDPRO"]
-        df_x = df.drop('INDPRO', axis=1).copy()
-
-        ##Step1 : Process nan values
-        #Drop columns with too many nan
-        col_to_drop = ['ACOGNO', 'TWEXMMTH', 'UMCSENTx', 'ANDENOx']
-        column_transformer = ColumnTransformer(
-            transformers=[('drop_columns', 'drop', col_to_drop)],
-            remainder='passthrough'
-        )
-        #Replace nan values by median for others
-        imputer = SimpleImputer(strategy='median')
-
-        #Convert numpy arrays to Pandas DataFrame
-        to_df = FunctionTransformer(lambda x: pd.DataFrame(x, columns=df_x.columns.drop(col_to_drop)), validate=False)
-
-        pipeline_drop_imputer = Pipeline([
-            ('preprocessor', column_transformer),
-            ('imputer', imputer),
-            ('to_dataframe', to_df)
-        ])
-
-        df_x_transform = pipeline_drop_imputer.fit_transform(df_x)
-        df_transform = df_x_transform.copy()
-        df_transform["INDPRO"] = df_y.values
-
-        ##Step 2 : first-order differenciation
-
-        df_transform_diff = df_transform.diff().drop(index=df_transform.index[0], axis=0, inplace=False)
-
-        return df_transform_diff

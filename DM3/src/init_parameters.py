@@ -97,6 +97,7 @@ def sample_q(a,b, seed=None):
         a (float): shape parameter
         b (float): shape parameter
         seed (int, optional): random seed
+
     Returns:
         float: q random variable
     """
@@ -157,6 +158,11 @@ def init_parameters(T, k, l, a, b, A, B, X, Y, n_iter_mh_sigma2, burn_in_period_
         b (float): Shape parameter for gamma2.
         A (float): Shape parameter for q.
         B (float): Shape parameter for q.
+        X (np.array): T*k matrix of predictors.
+        Y (np.array): T vector of target variables.
+        n_iter_mh_sigma2 (int): number of iterations to sample sigma^2 prior.
+        burn_in_period_mh_sigma2 (int): burn-in-period to sample sigma^2 prior.
+        jump_size_mh_sigma2 (int): jump size parameter to sample sigma^2 prior.
         seed (int, optional): random seed.
 
     Returns:
