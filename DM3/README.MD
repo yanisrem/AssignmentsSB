@@ -10,7 +10,7 @@ Python files where algorithms are implemented :
 * ```gibbs_sampler.py```: Gibbs sampler implementation from homework n°2.
 * ```init_parameter.py```: Initialize parameters for linear model with Gibbs Sampler.
 * ```mh_rw.py```: Metropolis-Hastings Random Walk to sample $\sigma^2$ according to its prior distribution.
-* ```preprocessing.py```: Data pre-processing (management of missing values, normalization, stationarization, train-test division)..
+* ```preprocessing.py```: Data pre-processing (management of missing values, normalization, stationarization, train-test division).
 * ```vectorize.py```: Vectorize data and parameters for computational challenges.
 
 Notebook files :
