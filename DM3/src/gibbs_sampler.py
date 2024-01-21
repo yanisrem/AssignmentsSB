@@ -12,7 +12,7 @@ def R2_q_flatted_grid(grid: np.ndarray) -> np.ndarray:
 
     Parameters:
         grid (np.ndarray): 1D array representing a 2D grid of parameters.
-s
+
     Returns:
         np.ndarray: 2D array with two columns representing pairs of parameters (R2, q).
     """
